@@ -8,16 +8,17 @@ rootpath = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(rootpath)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     X_train = np.load('data/X_train.npy')
     X_test = np.load('data/X_test.npy')
     X_train_hog = []
     X_test_hog = []
     print("Extract HOG features of training samples...")
     for i in range(X_train.shape[0]):
-        if (i+1) % 1000==0:
+        if (i+1) % 1000 == 0:
             print("{}/{}".format(i+1, X_train.shape[0]))
-        feature, hog_img = hog(X_train[i], 9, (16, 16), (2, 2), visualise=True, feature_vector=True)
+        feature, hog_img = hog(
+            X_train[i], 9, (16, 16), (2, 2), visualise=True, feature_vector=True)
         X_train_hog.append(feature)
     X_train_hog = np.array(X_train_hog)
     print("Finish extracting training samples!")
@@ -28,7 +29,8 @@ if __name__=="__main__":
     for i in range(X_test.shape[0]):
         if (i+1) % 1000 == 0:
             print("{}/{}".format(i+1, X_test.shape[0]))
-        feature, hog_img = hog(X_test[i], 9, (16, 16), (2, 2), visualise=True, feature_vector=True)
+        feature, hog_img = hog(
+            X_test[i], 9, (16, 16), (2, 2), visualise=True, feature_vector=True)
         X_test_hog.append(feature)
     X_test_hog = np.array(X_test_hog)
     print("Finish extracting test samples!")

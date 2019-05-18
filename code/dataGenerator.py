@@ -147,6 +147,7 @@ def GetDataset():
     np.random.shuffle(indices_test)
     return X_train[indices_train], X_test[indices_test], y_train[indices_train], y_test[indices_test]
 
+
 if __name__ == "__main__":
     X_train, X_test, y_train, y_test = GetDataset()
     print(X_train.shape)
