@@ -73,7 +73,7 @@ class LogisticRegression:
                 for i in indices:
                     self.W += self.learning_rate * \
                         y_train[i]/(1+np.exp(y_train[i] *
-                                             np.dot(X_train[i], self.W.T))) * X_train[i]
+                                             np.dot(X_train[i], zself.W.T))) * X_train[i]
                 acc = self.evaluation(X_train, y_train)
                 loss = self.lossFunction(X_train, y_train)
                 print(
