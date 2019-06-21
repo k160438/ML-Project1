@@ -2,6 +2,8 @@ import numpy as np
 import os
 import sys
 from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+import pickle 
 
 rootpath = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(rootpath)
@@ -19,6 +21,14 @@ class LogisticRegression:
         self.batchsize = 1
         self.sigma = 1
         self.delta_t = 0.2
+    
+    def save(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump(self.W, f)
+    
+    def load(self, path):
+        with open(path, 'rb') as f:
+            self.W = pickle.load(f)
 
     def setOptimizer(self, optimizer='SGD', learning_rate=0.001, epoch=1000, batchsize=1, sigma=1, delta_t=0.2):
         self.optimizer = optimizer
@@ -98,13 +108,27 @@ class LogisticRegression:
             if pred == y_test[i]:
                 count_true += 1
         return count_true / X_test.shape[0]
+    
+    def predict(self, X_test):
+        preds = np.zeros(X_test.shape[0])
+        for i in range(X_test.shape[0]):
+            if np.dot(X_test[i], self.W.T) > 0:
+                preds[i] = 1
+            else:
+                preds[i] = -1
+        return preds
 
 
 class LDA:
-    def __init__(self, Input_shape, bins=50):
+    def __init__(self, Input_shape, bins=50, mode = 0):
+        """
+            mode 0: predict using best threshold
+            mode 1: predict using gaussian model
+        """
         self.dims = Input_shape
         self.W = np.zeros(self.dims)
         self.threshold = 0
+        self.mode = mode
         self.delta_bins = bins
         self.center_p = None
         self.center_n = None
@@ -151,38 +175,72 @@ class LDA:
         print("Positive center: {}\nNegative center: {}".format(
             self.center_p, self.center_n))
 
-        # delta = (self.center_p - self.center_n) / self.delta_bins
+        delta = (self.center_p - self.center_n) / self.delta_bins
 
-        # best_threshold = 0
-        # best_acc = 0
-        # for i in range(1, self.delta_bins):
-        #     self.threshold = self.center_n + i * delta
-        #     acc = self.evaluation(X_train, y_train)
-        #     if acc > best_acc:
-        #         best_acc = acc
-        #         best_threshold = self.threshold
-        # self.threshold = best_threshold
+        if self.mode==0:
+            best_threshold = 0
+            best_acc = 0
+            for i in range(1, self.delta_bins):
+                self.threshold = self.center_n + i * delta
+                acc = self.evaluation(X_train, y_train)
+                if acc > best_acc:
+                    best_acc = acc
+                    best_threshold = self.threshold
+            self.threshold = best_threshold
+            print("Best threshold: {}\nTraining acc: {}".format(
+                best_threshold, best_acc))
 
-        # print("Best threshold: {}\nTraining acc: {}".format(
-        #     best_threshold, best_acc))
         print("training acc: {}".format(self.evaluation(X_train, y_train)))
 
 
     def evaluation(self, X_test, y_test):
         count_true = 0
-        for i in range(X_test.shape[0]):
-            projection = np.dot(self.W.T, X_test[i])
-            a = 1 / np.sqrt(2*np.pi*self.sigma_sqaure_p) * \
-                np.exp(-(projection-self.center_p)
-                    ** 2 / 2 / self.sigma_sqaure_p)
-            b = 1 / np.sqrt(2*np.pi*self.sigma_sqaure_n) * \
-                np.exp(-(projection-self.center_n)
-                    ** 2 / 2 / self.sigma_sqaure_n)
-            # if projection > self.threshold:
-            if a > b:
-                pred = 1
-            else:
-                pred = -1
-            if pred == y_test[i]:
-                count_true += 1
+        if self.mode==0:
+            for i in range(X_test.shape[0]):
+                if np.dot(self.W.T, X_test[i])>=self.threshold:
+                    pred = 1
+                else:
+                    pred = -1 
+                if pred == y_test[i]:
+                    count_true += 1
+        elif self.mode == 1:
+            for i in range(X_test.shape[0]):
+                projection = np.dot(self.W.T, X_test[i])
+                a = 1 / np.sqrt(2*np.pi*self.sigma_sqaure_p) * \
+                    np.exp(-(projection-self.center_p)
+                        ** 2 / 2 / self.sigma_sqaure_p)
+                b = 1 / np.sqrt(2*np.pi*self.sigma_sqaure_n) * \
+                    np.exp(-(projection-self.center_n)
+                        ** 2 / 2 / self.sigma_sqaure_n)
+                # if projection > self.threshold:
+                if a > b:
+                    pred = 1
+                else:
+                    pred = -1
+                if pred == y_test[i]:
+                    count_true += 1
+        else:
+            raise ValueError
         return count_true / X_test.shape[0]
+
+
+class SVM:
+    def __init__(self, kernel):
+        self.kernel = kernel
+        self.svc = SVC(kernel=self.kernel)
+        c_range = np.logspace(3, 12, 10, base=2)
+        # gamma_range = np.logspace(-10, 3, 5)
+        gamma_range = ['auto']
+        self.param_grid = {'C':c_range, 'gamma': gamma_range}
+        self.grid = GridSearchCV(self.svc, self.param_grid, cv=3, n_jobs=10)
+
+    def fit(self, X, y):
+        print("using {} kernel".format(self.kernel))
+        clf = self.grid.fit(X, y)
+        print(clf.best_params_)
+        print('best model:\n{}'.format(clf.best_estimator_))
+        return clf.best_estimator_
+
+    def evaluation(self, X, y):
+        acc = self.grid.score(X, y)
+        return acc

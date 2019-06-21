@@ -1,9 +1,8 @@
 import os
 import sys
-import model
+import models
 import numpy as np
-from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV
+from joblib import dump, load
 
 rootpath = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(rootpath)
@@ -17,24 +16,37 @@ if __name__ == "__main__":
     print(X_train.shape, X_test.shape)
     print(y_train.shape, y_test.shape)
     
-    # model = model.LogisticRegression(X_train.shape[1])
-    # model.setOptimizer('Langevin', 0.1, 500, 1)
-    
-    model = model.LDA(X_train.shape[1], 30)
-    
-    model.fit(X_train, y_train)
-    print("Test on test data:")
+    # print('Logistic regression')
+    # model = models.LogisticRegression(X_train.shape[1])
+    # model.setOptimizer('Langevin', 0.08, 7000, 1)
+    # # model.setOptimizer('SGD', 0.001, 1500)
+    # model.fit(X_train, y_train)
+    # print("Test on test data:")
     # test_loss = model.lossFunction(X_test, y_test)
-    test_acc = model.evaluation(X_test, y_test)
-    print("Test acc: {}".format(test_acc))
-
+    # test_acc = model.evaluation(X_test, y_test)
     # print("loss: {} \nacc: {}".format(test_loss, test_acc))
-    # print('svm classification')
-    # svc = SVC(gamma='auto')
-    # c_range = [1]
-    # # gamma_range = np.logspace(-5, 3, 5, base=2)
-    # param_grid = [{'kernel': ['linear'], 'C': c_range}]
-    # grid = GridSearchCV(svc, param_grid, cv=3, n_jobs=4)
-    # clf = grid.fit(X_train, y_train)
-    # acc = grid.score(X_test, y_test)
-    # print("acc is {}".format(acc))
+    # model.save('data/logistic_v3.pkl')
+
+
+    # print('LDA classification')
+    # model = models.LDA(X_train.shape[1], 30, 0)
+    # model.fit(X_train, y_train)
+    # print("Test on test data:")
+    # test_acc = model.evaluation(X_test, y_test)
+    # print("Test acc: {}".format(test_acc))
+
+
+    print('svm classification')
+    kernel = 'rbf'
+    model = models.SVM(kernel)
+    best_model = model.fit(X_train, y_train)
+    acc = model.evaluation(X_test, y_test)
+    print(best_model.support_vectors_.shape)
+    print(best_model.support_.shape)
+    print("acc is {}".format(acc))
+    print('save model...')
+    dump(best_model, 'data/{}_SVM_v2.joblib'.format(kernel))
+
+    # svm = load('data/rbf_SVM.joblib')
+    # preds = svm.predict(X_test[:100])
+    # print(preds)
